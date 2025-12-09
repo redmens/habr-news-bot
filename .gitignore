@@ -1,0 +1,15 @@
+venv/
+env/
+.env
+*.pyc
+__pycache__/
+*.db
+*.sqlite
+*.sqlite3
+.DS_Store
+*.log
+
+# Папки с данными и логами
+data/
+logs/
+
