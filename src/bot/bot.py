@@ -235,10 +235,12 @@ class HabrBot:
             except ValueError:
                 await update.message.reply_text("⚠️ Неверный формат. Используйте: /news [количество часов]. Использую 1 час по умолчанию.")
         
+        # Определяем hours_word для всех случаев
+        hours_word = format_number_with_noun(hours_back, 'час', 'часа', 'часов')
+        
         if hours_back == 1:
             loading_text = "⏳ Загружаю новости за последний час..."
         else:
-            hours_word = format_number_with_noun(hours_back, 'час', 'часа', 'часов')
             loading_text = f"⏳ Загружаю новости за последние {hours_word}..."
         loading_message = await update.message.reply_text(loading_text)
         
