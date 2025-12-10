@@ -38,6 +38,62 @@ BOT_TOKEN=your_telegram_bot_token_here
 python main.py
 ```
 
+## Запуск как сервис
+
+### Linux (через systemd)
+
+1. Создайте файл сервиса `/etc/systemd/system/habr-bot.service`:
+```ini
+[Unit]
+Description=Habr Telegram Bot
+After=network.target
+
+[Service]
+Type=simple
+User=your_username
+WorkingDirectory=/path/to/habr
+Environment="PATH=/path/to/habr/venv/bin"
+ExecStart=/path/to/habr/venv/bin/python /path/to/habr/main.py
+Restart=always
+RestartSec=10
+StandardOutput=append:/path/to/habr/logs/service.log
+StandardError=append:/path/to/habr/logs/service_error.log
+
+[Install]
+WantedBy=multi-user.target
+```
+
+2. Замените в файле:
+   - `your_username` - на ваше имя пользователя
+   - `/path/to/habr` - на полный путь к директории проекта
+
+3. Перезагрузите конфигурацию systemd:
+```bash
+sudo systemctl daemon-reload
+```
+
+4. Включите автозапуск:
+```bash
+sudo systemctl enable habr-bot.service
+```
+
+5. Запустите сервис:
+```bash
+sudo systemctl start habr-bot.service
+```
+
+6. Проверьте статус:
+```bash
+sudo systemctl status habr-bot.service
+```
+
+7. Управление сервисом:
+```bash
+sudo systemctl stop habr-bot.service     # остановить
+sudo systemctl restart habr-bot.service  # перезапустить
+sudo systemctl disable habr-bot.service  # отключить автозапуск
+```
+
 ## Команды бота
 
 - `/start` - подписаться на рассылку новостей и начать работу с ботом
