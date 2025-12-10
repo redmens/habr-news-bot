@@ -237,11 +237,10 @@ class HabrBot:
         
         # Определяем hours_word для всех случаев
         hours_word = format_number_with_noun(hours_back, 'час', 'часа', 'часов')
+        # Для сообщений используем правильный текст в зависимости от количества часов
+        hours_text = "последний час" if hours_back == 1 else f"последние {hours_word}"
         
-        if hours_back == 1:
-            loading_text = "⏳ Загружаю новости за последний час..."
-        else:
-            loading_text = f"⏳ Загружаю новости за последние {hours_word}..."
+        loading_text = f"⏳ Загружаю новости за {hours_text}..."
         loading_message = await update.message.reply_text(loading_text)
         
         try:
@@ -281,11 +280,11 @@ class HabrBot:
                 articles_word = format_number_with_noun(total_articles, 'новость', 'новости', 'новостей')
                 hubs_word = format_number_with_noun(len(user_hub_articles), 'хаб', 'хаба', 'хабов')
                 await loading_message.edit_text(
-                    f"✅ Найдено {articles_word} за последние {hours_word} из {hubs_word}"
+                    f"✅ Найдено {articles_word} за {hours_text} из {hubs_word}"
                 )
             else:
                 await loading_message.edit_text(
-                    f"📭 Новых статей за последние {hours_word} не найдено.\nПопробуйте позже или используйте автоматическую рассылку."
+                    f"📭 Новых статей за {hours_text} не найдено.\nПопробуйте позже или используйте автоматическую рассылку."
                 )
                 
         except Exception as e:
