@@ -44,40 +44,60 @@ class Scheduler:
         
         logger.info(f"Найдено {len(subscribed_users)} подписчиков")
         
+        # Шаг 1: Собираем все уникальные хабы всех подписчиков
+        all_unique_hubs = set()
+        user_hubs_map = {}  # {user_id: set(hub_names)}
+        
+        for user_id in subscribed_users:
+            user_hubs = self.db.get_user_hubs(user_id)
+            if user_hubs:
+                all_unique_hubs.update(user_hubs)
+                user_hubs_map[user_id] = user_hubs
+        
+        if not all_unique_hubs:
+            logger.info("Нет выбранных хабов у подписчиков")
+            return
+        
+        logger.info(f"Найдено {len(all_unique_hubs)} уникальных хабов для парсинга: {sorted(all_unique_hubs)}")
+        
+        # Шаг 2: Парсим каждый уникальный хаб один раз
+        hub_articles_cache = {}  # {hub_name: [articles]}
+        
+        for hub_name in sorted(all_unique_hubs):
+            try:
+                logger.info(f"Парсинг хаба '{hub_name}' (один раз для всех пользователей)")
+                articles = parse_hub_articles(hub_name, hours_back)
+                hub_articles_cache[hub_name] = articles
+                articles_word = format_number_with_noun(len(articles), 'статья', 'статьи', 'статей')
+                logger.info(f"Спарсено {articles_word} из хаба '{hub_name}'")
+            except Exception as e:
+                logger.error(f"Ошибка при парсинге хаба '{hub_name}': {e}")
+                hub_articles_cache[hub_name] = []
+                continue
+        
+        # Шаг 3: Распределяем статьи по пользователям и отправляем
         for user_id in subscribed_users:
             try:
-                # Получаем хабы пользователя
-                user_hubs = self.db.get_user_hubs(user_id)
-                
+                user_hubs = user_hubs_map.get(user_id)
                 if not user_hubs:
                     logger.info(f"У пользователя {user_id} нет выбранных хабов, пропускаем")
                     continue
                 
-                # Собираем все статьи из хабов пользователя
-                all_articles = []
-                seen_urls = set()  # Для удаления дубликатов
-                
+                # Формируем словарь статей по хабам для пользователя
+                user_hub_articles = {}
                 for hub_name in user_hubs:
-                    try:
-                        logger.info(f"Парсинг хаба '{hub_name}' для пользователя {user_id}")
-                        articles = parse_hub_articles(hub_name, hours_back)
-                        
-                        for article in articles:
-                            if article['url'] not in seen_urls:
-                                seen_urls.add(article['url'])
-                                all_articles.append(article)
-                    except Exception as e:
-                        logger.error(f"Ошибка при парсинге хаба '{hub_name}' для пользователя {user_id}: {e}")
-                        continue
+                    if hub_name in hub_articles_cache:
+                        articles = hub_articles_cache[hub_name]
+                        if articles:
+                            user_hub_articles[hub_name] = articles
                 
-                # Сортируем статьи по времени публикации (новые сначала)
-                all_articles.sort(key=lambda x: x['published_at'] or datetime.min, reverse=True)
-                
-                # Отправляем статьи пользователю
-                if all_articles:
-                    await self.bot.send_articles_to_user(user_id, all_articles)
-                    articles_word = format_number_with_noun(len(all_articles), 'статья', 'статьи', 'статей')
-                    logger.info(f"Отправлено {articles_word} пользователю {user_id}")
+                # Отправляем статьи пользователю (отдельные сообщения по каждому хабу)
+                if user_hub_articles:
+                    await self.bot.send_articles_to_user(user_id, user_hub_articles)
+                    total_articles = sum(len(articles) for articles in user_hub_articles.values())
+                    articles_word = format_number_with_noun(total_articles, 'статья', 'статьи', 'статей')
+                    hubs_word = format_number_with_noun(len(user_hub_articles), 'хаб', 'хаба', 'хабов')
+                    logger.info(f"Отправлено {articles_word} из {hubs_word} пользователю {user_id}")
                 else:
                     logger.info(f"Нет новых статей для пользователя {user_id}")
                 
